@@ -8,7 +8,50 @@ Integrates LangChain with SAP HANA Cloud to make use of vector search, knowledge
 
 ## Requirements and Setup
 
-*Insert a short description what is required to get your project running...*
+### Prerequisites
+
+- **Python Environment**: Ensure you have Python 3.9 or higher installed.
+- **SAP HANA Cloud**: Access to a running SAP HANA Cloud instance.
+
+
+### Installation
+
+Install the LangChain SAP HANA Cloud integration package using `pip`:
+
+```bash
+pip install -U langchain-sap-hana-cloud
+```
+
+### Setting Up Vectorstore
+
+The `HanaDB` class is used to connect to SAP HANA Cloud Vector Engine.
+
+Here’s how to set up the connection and initialize the vector store:
+
+```python
+from langchain_sap_hana_cloud import HanaDB
+from hdbcli import dbapi
+
+# use a LangChain Embeddings class
+embeddings = ...  
+
+# Establish the SAP HANA Cloud connection
+connection = dbapi.connect(
+    address="<hostname>",
+    port=3<NN>MM,
+    user="<username>",
+    password="<password>"
+)
+
+# Initialize the HanaDB vector store
+vectorstore = HanaDB(
+    connection=connection,
+    embeddings=embeddings,
+    table_name="<table_name>"  # Optional: Default is "EMBEDDINGS"
+)
+
+```
+
 
 ## Support, Feedback, Contributing
 
