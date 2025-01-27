@@ -8,15 +8,10 @@ version = "0.1.0"
 description = "An integration package connecting SAP Hana Cloud and LangChain"
 authors = []
 readme = "README.md"
-repository = "https://github.com/langchain-ai/langchain"
 license = "MIT"
 
 [tool.mypy]
 disallow_untyped_defs = "True"
-
-[tool.poetry.urls]
-"Source Code" = "https://github.com/langchain-ai/langchain/tree/master/libs/partners/sap-hana-cloud"
-"Release Notes" = "https://github.com/langchain-ai/langchain/releases?q=tag%3A%22sap-hana-cloud%3D%3D0%22&expanded=true"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
@@ -47,9 +42,6 @@ asyncio_mode = "auto"
 [tool.poetry.group.test]
 optional = true
 
-[tool.poetry.group.codespell]
-optional = true
-
 [tool.poetry.group.test_integration]
 optional = true
 
@@ -68,9 +60,6 @@ pytest-socket = "^0.7.0"
 pytest-watcher = "^0.3.4"
 langchain-tests = "^0.3.5"
 
-[tool.poetry.group.codespell.dependencies]
-codespell = "^2.2.6"
-
 [tool.poetry.group.test_integration.dependencies]
 
 [tool.poetry.group.lint.dependencies]
@@ -78,9 +67,3 @@ ruff = "^0.5"
 
 [tool.poetry.group.typing.dependencies]
 mypy = "^1.10"
-
-[tool.codespell]
-skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,example_data,_dist,examples,templates,*.trig,venv'
-
-
-
