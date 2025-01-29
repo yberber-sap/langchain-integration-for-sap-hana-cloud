@@ -1,5 +1,6 @@
 from importlib import metadata
 
+from langchain_sap_hana_cloud.embeddings import HanaInternalEmbeddings
 from langchain_sap_hana_cloud.vectorstores import HanaDB
 
 try:
@@ -11,5 +12,6 @@ del metadata  # optional, avoids polluting the results of dir(__package__)
 
 __all__ = [
     "HanaDB",
+    "HanaInternalEmbeddings",
     "__version__",
 ]
