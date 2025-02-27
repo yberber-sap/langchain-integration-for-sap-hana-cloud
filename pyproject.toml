@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "An integration package connecting SAP Hana Cloud and LangChain"
 authors = []
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 
 [tool.mypy]
 disallow_untyped_defs = "True"
