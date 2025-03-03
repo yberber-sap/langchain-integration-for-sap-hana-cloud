@@ -9,7 +9,7 @@ from langchain_core.structured_query import (
     StructuredQuery,
 )
 
-from langchain_sap_hana_cloud.query_constructors import HanaTranslator
+from langchain_hana.query_constructors import HanaTranslator
 
 DEFAULT_TRANSLATOR = HanaTranslator()
 

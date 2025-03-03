@@ -21,8 +21,8 @@ from langchain_core.runnables.config import run_in_executor
 from langchain_core.vectorstores import VectorStore
 from langchain_core.vectorstores.utils import maximal_marginal_relevance
 
-from langchain_sap_hana_cloud.embeddings import HanaInternalEmbeddings
-from langchain_sap_hana_cloud.utils import DistanceStrategy
+from langchain_hana.embeddings import HanaInternalEmbeddings
+from langchain_hana.utils import DistanceStrategy
 
 HANA_DISTANCE_FUNCTION: dict = {
     DistanceStrategy.COSINE: ("COSINE_SIMILARITY", "DESC"),

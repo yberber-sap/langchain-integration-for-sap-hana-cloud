@@ -1,6 +1,6 @@
 """Test HanaVector functionality."""
 
-from langchain_sap_hana_cloud.vectorstores import HanaDB
+from langchain_hana.vectorstores import HanaDB
 
 
 def test_int_sanitation_with_illegal_value() -> None:
