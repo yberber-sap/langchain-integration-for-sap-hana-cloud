@@ -24,11 +24,11 @@ integration_test integration_tests:
 ######################
 
 # Define a variable for Python and notebook files.
-PYTHON_FILES=langchain_sap_hana_cloud
+PYTHON_FILES=langchain_hana
 MYPY_CACHE=.mypy_cache
-lint format: PYTHON_FILES=langchain_sap_hana_cloud
-lint_diff format_diff: PYTHON_FILES=$(shell git diff --relative=langchain-sap-hana-cloud --name-only --diff-filter=d master | grep -E '\.py$$|\.ipynb$$')
-lint_package: PYTHON_FILES=langchain_sap_hana_cloud
+lint format: PYTHON_FILES=langchain_hana
+lint_diff format_diff: PYTHON_FILES=$(shell git diff --relative=langchain-hana --name-only --diff-filter=d main | grep -E '\.py$$|\.ipynb$$')
+lint_package: PYTHON_FILES=langchain_hana
 lint_tests: PYTHON_FILES=tests
 lint_tests: MYPY_CACHE=.mypy_cache_test
 
@@ -41,7 +41,7 @@ format format_diff:
 	[ "$(PYTHON_FILES)" = "" ] || poetry run ruff format $(PYTHON_FILES)
 	[ "$(PYTHON_FILES)" = "" ] || poetry run ruff check --select I --fix $(PYTHON_FILES)
 
-check_imports: $(shell find langchain_sap_hana_cloud -name '*.py')
+check_imports: $(shell find langchain_hana -name '*.py')
 	poetry run python ./scripts/check_imports.py $^
 
 

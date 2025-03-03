@@ -19,7 +19,7 @@ Integrates LangChain with SAP HANA Cloud to make use of vector search, knowledge
 Install the LangChain SAP HANA Cloud integration package using `pip`:
 
 ```bash
-pip install -U langchain-sap-hana-cloud
+pip install -U langchain-hana
 ```
 
 ### Setting Up Vectorstore
@@ -29,7 +29,7 @@ The `HanaDB` class is used to connect to SAP HANA Cloud Vector Engine.
 Here’s how to set up the connection and initialize the vector store:
 
 ```python
-from langchain_sap_hana_cloud import HanaDB
+from langchain_hana import HanaDB
 from hdbcli import dbapi
 
 # use a LangChain Embeddings class
