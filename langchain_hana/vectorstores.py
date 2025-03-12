@@ -283,8 +283,8 @@ class HanaDB(VectorStore):
     @staticmethod
     def _serialize_fvecs(values: list[float]) -> bytes:
         # Converts a list of floats into FVECS binary format
-        values = HanaDB.sanitize_list_float(values)
-        return struct.pack("<I%sf" % len(values), len(values), *values)
+        values = HanaDB._sanitize_list_float(values)
+        return struct.pack(f"<I{len(values)}f", len(values), *values)
 
     @staticmethod
     def _deserialize_fvecs(fvecs: bytes) -> list[float]:
@@ -437,7 +437,7 @@ class HanaDB(VectorStore):
                 (
                     text,
                     json.dumps(HanaDB._sanitize_metadata_keys(metadata)),
-                    HanaDB._serialize_fvecs(embedding),
+                    HanaDB._serialize_fvecs(embeddings[i]),
                     *extracted_special_metadata,
                 )
             )
@@ -1032,8 +1032,8 @@ class HanaDB(VectorStore):
             embedding = self.embedding.embed_query(query)
         else:  # generates embedding using the internal embedding function of HanaDb
             sql_str = (
-                f"SELECT VECTOR_EMBEDDING(:content, 'QUERY', :model_version) "
-                f"FROM sys.DUMMY;"
+                "SELECT VECTOR_EMBEDDING(:content, 'QUERY', :model_version) "
+                "FROM sys.DUMMY;"
             )
             cur = self.connection.cursor()
             try:
