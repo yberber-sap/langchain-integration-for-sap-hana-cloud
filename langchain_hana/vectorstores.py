@@ -283,7 +283,6 @@ class HanaDB(VectorStore):
     @staticmethod
     def _serialize_fvecs(values: list[float]) -> bytes:
         # Converts a list of floats into FVECS binary format
-        values = HanaDB._sanitize_list_float(values)
         return struct.pack(f"<I{len(values)}f", len(values), *values)
 
     @staticmethod
