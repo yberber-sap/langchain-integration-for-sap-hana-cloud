@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import struct
 from typing import (
     Any,
     Callable,
@@ -279,6 +280,17 @@ class HanaDB(VectorStore):
             metadata_columns.append(sanitized_name)
         return metadata_columns
 
+    @staticmethod
+    def _serialize_fvecs(values: list[float]) -> bytes:
+        # Converts a list of floats into FVECS binary format
+        return struct.pack(f"<I{len(values)}f", len(values), *values)
+
+    @staticmethod
+    def _deserialize_fvecs(fvecs: bytes) -> list[float]:
+        # Extracts a list of floats from FVECS binary format
+        dim = struct.unpack_from("<I", fvecs, 0)[0]
+        return list(struct.unpack_from("<%sf" % dim, fvecs, 4))
+
     def _split_off_special_metadata(self, metadata: dict) -> tuple[dict, list]:
         # Use provided values by default or fallback
         special_metadata = []
@@ -424,7 +436,7 @@ class HanaDB(VectorStore):
                 (
                     text,
                     json.dumps(HanaDB._sanitize_metadata_keys(metadata)),
-                    str(embeddings[i]),
+                    HanaDB._serialize_fvecs(embeddings[i]),
                     *extracted_special_metadata,
                 )
             )
@@ -434,7 +446,7 @@ class HanaDB(VectorStore):
             f'INSERT INTO "{self.table_name}" ("{self.content_column}", '
             f'"{self.metadata_column}", '
             f'"{self.vector_column}"{specific_metadata_columns_string}) '
-            f"VALUES (?, ?, TO_REAL_VECTOR (?)"
+            f"VALUES (?, ?, ?"
             f"{', ?' * len(self.specific_metadata_columns)});"
         )
 
@@ -714,7 +726,7 @@ class HanaDB(VectorStore):
             f"SELECT TOP {k}"
             f'  "{self.content_column}", '  # row[0]
             f'  "{self.metadata_column}", '  # row[1]
-            f'  TO_NVARCHAR("{self.vector_column}"), '  # row[2]
+            f'  "{self.vector_column}", '  # row[2]
             f'  {distance_func_name}("{self.vector_column}", '
             f"  {embedding_expr}) AS CS "  # row[3]
             f"FROM {from_clause}"
@@ -729,7 +741,7 @@ class HanaDB(VectorStore):
                 for row in rows:
                     js = json.loads(row[1])
                     doc = Document(page_content=row[0], metadata=js)
-                    result_vector = HanaDB._parse_float_array_from_string(row[2])
+                    result_vector = HanaDB._deserialize_fvecs(row[2])
                     result.append((doc, row[3], result_vector))
         finally:
             cur.close()
@@ -1019,8 +1031,8 @@ class HanaDB(VectorStore):
             embedding = self.embedding.embed_query(query)
         else:  # generates embedding using the internal embedding function of HanaDb
             sql_str = (
-                "SELECT TO_NVARCHAR("
-                "VECTOR_EMBEDDING(:content, 'QUERY', :model_version)) FROM sys.DUMMY;"
+                "SELECT VECTOR_EMBEDDING(:content, 'QUERY', :model_version) "
+                "FROM sys.DUMMY;"
             )
             cur = self.connection.cursor()
             try:
@@ -1031,7 +1043,7 @@ class HanaDB(VectorStore):
                 )
                 if cur.has_result_set():
                     res = cur.fetchall()
-                    embedding = json.loads(res[0][0])
+                    embedding = HanaDB._deserialize_fvecs(res[0][0])
             finally:
                 cur.close()
 
