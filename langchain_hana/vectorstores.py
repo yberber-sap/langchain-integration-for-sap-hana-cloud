@@ -227,9 +227,9 @@ class HanaDB(VectorStore):
             # Test the VECTOR_EMBEDDING function by executing a simple query
             cur.execute(
                 (
-                    "SELECT TO_NVARCHAR("
-                    "VECTOR_EMBEDDING('test', 'QUERY', :model_version))"
-                    "FROM sys.DUMMY;"
+                    "SELECT COUNT(TO_NVARCHAR("
+                    "VECTOR_EMBEDDING('test', 'QUERY', :model_version))) "
+                    ' AS "CNT" FROM sys.DUMMY;'
                 ),
                 model_version=self.internal_embedding_model_id,
             )
