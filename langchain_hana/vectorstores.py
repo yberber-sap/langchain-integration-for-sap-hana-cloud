@@ -812,7 +812,10 @@ class HanaDB(VectorStore):
         """
 
         metadata_columns = [
-            f"JSON_VALUE({self.metadata_column}, '$.{col}') AS \"{col}\""
+            (
+                f"JSON_VALUE({self.metadata_column}, '$.{HanaDB._sanitize_name(col)}') "
+                f'AS "{HanaDB._sanitize_name(col)}"'
+            )
             for col in projected_metadata_columns
         ]
         return (
