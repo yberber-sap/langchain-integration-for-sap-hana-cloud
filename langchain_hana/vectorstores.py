@@ -765,29 +765,33 @@ class HanaDB(VectorStore):
             Result: ["title"]
         """
         keyword_columns = set()
-
-        def recurse_filters(
-            f: Optional[dict[Any, Any]], parent_key: Optional[str] = None
-        ) -> None:
-            if isinstance(f, dict):
-                for key, value in f.items():
-                    if key == CONTAINS_OPERATOR:
-                        # Add the parent key as it's the metadata column being filtered
-                        if parent_key and not (
-                            parent_key == self.content_column
-                            or parent_key in self.specific_metadata_columns
-                        ):
-                            keyword_columns.add(parent_key)
-                    elif (
-                        key in LOGICAL_OPERATORS_TO_SQL.keys()
-                    ):  # Handle logical operators
-                        for subfilter in value:
-                            recurse_filters(subfilter)
-                    else:
-                        recurse_filters(value, parent_key=key)
-
-        recurse_filters(filter)
+        self._recurse_filters(keyword_columns, filter)
         return list(keyword_columns)
+
+    def _recurse_filters(
+        self,
+        keyword_columns: set[str],
+        filter_obj: Optional[dict[Any, Any]],
+        parent_key: Optional[str] = None,
+    ) -> None:
+        """
+        Recursively process the filter dictionary
+        to find metadata columns used with `$contains`.
+        """
+        if isinstance(filter_obj, dict):
+            for key, value in filter_obj.items():
+                if key == CONTAINS_OPERATOR:
+                    # Add the parent key as it's the metadata column being filtered
+                    if parent_key and not (
+                        parent_key == self.content_column
+                        or parent_key in self.specific_metadata_columns
+                    ):
+                        keyword_columns.add(parent_key)
+                elif key in LOGICAL_OPERATORS_TO_SQL.keys():  # Handle logical operators
+                    for subfilter in value:
+                        self._recurse_filters(keyword_columns, subfilter)
+                else:
+                    self._recurse_filters(keyword_columns, value, parent_key=key)
 
     def _create_metadata_projection(self, projected_metadata_columns: list[str]) -> str:
         """
