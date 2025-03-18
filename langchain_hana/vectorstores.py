@@ -107,14 +107,15 @@ class HanaDB(VectorStore):
         )
 
         # Configure the embedding (internal or external)
-        self.embedding = self.use_internal_embeddings = None
-        self.internal_embedding_model_id = None
+        self.embedding: Embeddings
+        self.use_internal_embeddings: bool = False
+        self.internal_embedding_model_id: str = ""
         self.set_embedding(embedding)
 
         # Initialize the table if it doesn't exist
         self._initialize_table()
 
-    def set_embedding(self, embedding):
+    def set_embedding(self, embedding: Embeddings) -> None:
         """
         Use this method if you need to change the embedding instance
         """
@@ -409,9 +410,13 @@ class HanaDB(VectorStore):
         # decide how to add texts
         # using external embedding instance or internal embedding function of HanaDB
         if self.use_internal_embeddings:
-            self._add_texts_using_internal_embedding(texts, metadatas, embeddings)
+            return self._add_texts_using_internal_embedding(
+                texts, metadatas, embeddings
+            )
         else:
-            self._add_texts_using_external_embedding(texts, metadatas, embeddings)
+            return self._add_texts_using_external_embedding(
+                texts, metadatas, embeddings
+            )
 
     def _add_texts_using_external_embedding(
         self,
@@ -677,7 +682,7 @@ class HanaDB(VectorStore):
         embedding_expr: str,
         k: int = 4,
         filter: Optional[dict] = None,
-        vector_embedding_params: list[str, str] = None,
+        vector_embedding_params: Optional[list[str]] = None,
     ) -> list[tuple[Document, float, list[float]]]:
         """Perform similarity search and return documents with scores and vectors.
 
@@ -764,7 +769,7 @@ class HanaDB(VectorStore):
                 {"VEC_TEXT": {"$contains": "fred"}}]}
             Result: ["title"]
         """
-        keyword_columns = set()
+        keyword_columns: set[str] = set()
         self._recurse_filters(keyword_columns, filter)
         return list(keyword_columns)
 
