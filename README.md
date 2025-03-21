@@ -26,14 +26,19 @@ pip install -U langchain-hana
 
 The `HanaDB` class is used to connect to SAP HANA Cloud Vector Engine.
 
+> **Important**:  You can use any embedding class that inherits from `langchain_core.embeddings.Embeddings`—**including** `HanaInternalEmbeddings`, which runs SAP HANA’s `VECTOR_EMBEDDING()` function internally. See [SAP Help](https://help.sap.com/docs/hana-cloud-database/sap-hana-cloud-sap-hana-database-vector-engine-guide/vector-embedding-function-vector?locale=en-US) for more details.
+
 Here’s how to set up the connection and initialize the vector store:
 
 ```python
-from langchain_hana import HanaDB
+from langchain_hana import HanaDB, HanaInternalEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from hdbcli import dbapi
 
-# use a LangChain Embeddings class
-embeddings = ...  
+# 1) HANA-internal embedding
+internal_emb = HanaInternalEmbeddings(internal_embedding_model_id="SAP_NEB.20240715")
+# 2) External embedding
+external_emb = OpenAIEmbeddings()
 
 # Establish the SAP HANA Cloud connection
 connection = dbapi.connect(
@@ -46,7 +51,7 @@ connection = dbapi.connect(
 # Initialize the HanaDB vector store
 vectorstore = HanaDB(
     connection=connection,
-    embeddings=embeddings,
+    embeddings=internal_emb,  # or external_emb
     table_name="<table_name>"  # Optional: Default is "EMBEDDINGS"
 )
 

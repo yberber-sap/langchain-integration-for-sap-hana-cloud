@@ -107,14 +107,15 @@ class HanaDB(VectorStore):
         )
 
         # Configure the embedding (internal or external)
-        self.embedding = self.use_internal_embeddings = None
-        self.internal_embedding_model_id = None
+        self.embedding: Embeddings
+        self.use_internal_embeddings: bool = False
+        self.internal_embedding_model_id: str = ""
         self.set_embedding(embedding)
 
         # Initialize the table if it doesn't exist
         self._initialize_table()
 
-    def set_embedding(self, embedding):
+    def set_embedding(self, embedding: Embeddings) -> None:
         """
         Use this method if you need to change the embedding instance
         """
@@ -227,9 +228,9 @@ class HanaDB(VectorStore):
             # Test the VECTOR_EMBEDDING function by executing a simple query
             cur.execute(
                 (
-                    "SELECT TO_NVARCHAR("
-                    "VECTOR_EMBEDDING('test', 'QUERY', :model_version))"
-                    "FROM sys.DUMMY;"
+                    "SELECT COUNT(TO_NVARCHAR("
+                    "VECTOR_EMBEDDING('test', 'QUERY', :model_version))) "
+                    ' AS "CNT" FROM sys.DUMMY;'
                 ),
                 model_version=self.internal_embedding_model_id,
             )
@@ -409,9 +410,13 @@ class HanaDB(VectorStore):
         # decide how to add texts
         # using external embedding instance or internal embedding function of HanaDB
         if self.use_internal_embeddings:
-            self._add_texts_using_internal_embedding(texts, metadatas, embeddings)
+            return self._add_texts_using_internal_embedding(
+                texts, metadatas, embeddings
+            )
         else:
-            self._add_texts_using_external_embedding(texts, metadatas, embeddings)
+            return self._add_texts_using_external_embedding(
+                texts, metadatas, embeddings
+            )
 
     def _add_texts_using_external_embedding(
         self,
@@ -677,7 +682,7 @@ class HanaDB(VectorStore):
         embedding_expr: str,
         k: int = 4,
         filter: Optional[dict] = None,
-        vector_embedding_params: list[str, str] = None,
+        vector_embedding_params: Optional[list[str]] = None,
     ) -> list[tuple[Document, float, list[float]]]:
         """Perform similarity search and return documents with scores and vectors.
 
@@ -764,30 +769,34 @@ class HanaDB(VectorStore):
                 {"VEC_TEXT": {"$contains": "fred"}}]}
             Result: ["title"]
         """
-        keyword_columns = set()
-
-        def recurse_filters(
-            f: Optional[dict[Any, Any]], parent_key: Optional[str] = None
-        ) -> None:
-            if isinstance(f, dict):
-                for key, value in f.items():
-                    if key == CONTAINS_OPERATOR:
-                        # Add the parent key as it's the metadata column being filtered
-                        if parent_key and not (
-                            parent_key == self.content_column
-                            or parent_key in self.specific_metadata_columns
-                        ):
-                            keyword_columns.add(parent_key)
-                    elif (
-                        key in LOGICAL_OPERATORS_TO_SQL.keys()
-                    ):  # Handle logical operators
-                        for subfilter in value:
-                            recurse_filters(subfilter)
-                    else:
-                        recurse_filters(value, parent_key=key)
-
-        recurse_filters(filter)
+        keyword_columns: set[str] = set()
+        self._recurse_filters(keyword_columns, filter)
         return list(keyword_columns)
+
+    def _recurse_filters(
+        self,
+        keyword_columns: set[str],
+        filter_obj: Optional[dict[Any, Any]],
+        parent_key: Optional[str] = None,
+    ) -> None:
+        """
+        Recursively process the filter dictionary
+        to find metadata columns used with `$contains`.
+        """
+        if isinstance(filter_obj, dict):
+            for key, value in filter_obj.items():
+                if key == CONTAINS_OPERATOR:
+                    # Add the parent key as it's the metadata column being filtered
+                    if parent_key and not (
+                        parent_key == self.content_column
+                        or parent_key in self.specific_metadata_columns
+                    ):
+                        keyword_columns.add(parent_key)
+                elif key in LOGICAL_OPERATORS_TO_SQL.keys():  # Handle logical operators
+                    for subfilter in value:
+                        self._recurse_filters(keyword_columns, subfilter)
+                else:
+                    self._recurse_filters(keyword_columns, value, parent_key=key)
 
     def _create_metadata_projection(self, projected_metadata_columns: list[str]) -> str:
         """
@@ -808,7 +817,10 @@ class HanaDB(VectorStore):
         """
 
         metadata_columns = [
-            f"JSON_VALUE({self.metadata_column}, '$.{col}') AS \"{col}\""
+            (
+                f"JSON_VALUE({self.metadata_column}, '$.{HanaDB._sanitize_name(col)}') "
+                f'AS "{HanaDB._sanitize_name(col)}"'
+            )
             for col in projected_metadata_columns
         ]
         return (
