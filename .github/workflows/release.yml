@@ -1,7 +1,6 @@
 name: Release
 run-name: Releasing by @${{ github.actor }}
 on:
-  workflow_call:
   workflow_dispatch:
 
 env:
