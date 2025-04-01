@@ -18,6 +18,7 @@ from tests.integration_tests.fixtures.filtering_test_cases import (
     TYPE_4_FILTERING_TEST_CASES,
     TYPE_5_FILTERING_TEST_CASES,
 )
+from tests.integration_tests.hana_test_utils import HanaTestUtils
 
 TYPE_4B_FILTERING_TEST_CASES = [
     # Test $nin, which is missing in TYPE_4_FILTERING_TEST_CASES
@@ -86,29 +87,17 @@ def setup_module(module):  # type: ignore[no-untyped-def]
         sslValidateCertificate=False,
         # encrypt=True
     )
-    try:
-        cur = test_setup.conn.cursor()
-        test_setup.schema_name = generateSchemaName(cur)
-        sql_str = f"CREATE SCHEMA {test_setup.schema_name}"
-        cur.execute(sql_str)
-        sql_str = f"SET SCHEMA {test_setup.schema_name}"
-        cur.execute(sql_str)
-    except dbapi.ProgrammingError:
-        pass
-    finally:
-        cur.close()
+    schema_prefix = "LANGCHAIN_TEST"
+    HanaTestUtils.drop_old_test_schemas(test_setup.conn, schema_prefix)
+    test_setup.schema_name = HanaTestUtils.generate_schema_name(
+        test_setup.conn, schema_prefix
+    )
+    HanaTestUtils.create_and_set_schema(test_setup.conn, test_setup.schema_name)
 
 
 def teardown_module(module):  # type: ignore[no-untyped-def]
-    # return
-    try:
-        cur = test_setup.conn.cursor()
-        sql_str = f"DROP SCHEMA {test_setup.schema_name} CASCADE"
-        cur.execute(sql_str)
-    except dbapi.ProgrammingError:
-        pass
-    finally:
-        cur.close()
+    HanaTestUtils.drop_schema_if_exists(test_setup.conn, test_setup.schema_name)
+
 
 
 @pytest.fixture
