@@ -309,9 +309,11 @@ class HanaDB(VectorStore):
         if self.vector_column_type == VectorColumnType.HALF_VECTOR:
             # 2-byte half-precision float serialization
             return struct.pack(f"<I{len(values)}e", len(values), *values)
-        else:
+        elif self.vector_column_type == VectorColumnType.REAL_VECTOR:
             # 4-byte float serialization (standard FVECS format)
             return struct.pack(f"<I{len(values)}f", len(values), *values)
+        else:
+            raise ValueError(f"Unsupported vector column type: {self.vector_column_type}")
 
     def _deserialize_binary_format(self, fvecs: bytes) -> list[float]:
         # Extracts a list of floats from binary format
@@ -319,9 +321,11 @@ class HanaDB(VectorStore):
         if self.vector_column_type == VectorColumnType.HALF_VECTOR:
             # 2-byte half-precision float deserialization
             return list(struct.unpack_from(f"<{dim}e", fvecs, 4))
-        else:
+        elif self.vector_column_type == VectorColumnType.REAL_VECTOR:
             # 4-byte float deserialization (standard FVECS format)
             return list(struct.unpack_from(f"<{dim}f", fvecs, 4))
+        else:
+            raise ValueError(f"Unsupported vector column type: {self.vector_column_type}")
 
     def _split_off_special_metadata(self, metadata: dict) -> tuple[dict, list]:
         # Use provided values by default or fallback
