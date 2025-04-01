@@ -318,10 +318,10 @@ class HanaDB(VectorStore):
         dim = struct.unpack_from("<I", fvecs, 0)[0]
         if self.vector_column_type == VectorColumnType.HALF_VECTOR:
             # 2-byte half-precision float deserialization
-            return list(struct.unpack_from("<%se" % dim, fvecs, 4))
+            return list(struct.unpack_from(f"<{dim}e", fvecs, 4))
         else:
             # 4-byte float deserialization (standard FVECS format)
-            return list(struct.unpack_from("<%sf" % dim, fvecs, 4))
+            return list(struct.unpack_from(f"<{dim}f", fvecs, 4))
 
     def _split_off_special_metadata(self, metadata: dict) -> tuple[dict, list]:
         # Use provided values by default or fallback
