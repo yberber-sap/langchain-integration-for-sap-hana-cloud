@@ -335,34 +335,47 @@ class HanaDB(VectorStore):
 
         return metadata, special_metadata
 
-    def _get_vector_conversion_function(self) -> str:
+    def _convert_to_target_vector_type(self, expr: str) -> str:
         """
-        Get the appropriate vector conversion function based on vector column type
+        Converts a vector expression to the target vector column type.
+
+        Applies the appropriate vector conversion function
+            (TO_REAL_VECTOR or TO_HALF_VECTOR) to the provided
+            expression based on the configured vector_column_type.
+
+        Args:
+            expr (str): a vector expression
 
         Returns:
-            SQL function name for vector conversion (TO_REAL_VECTOR or TO_HALF_VECTOR)
+            str: The expression wrapped with the appropriate conversion function.
         """
         if self.vector_column_type == VectorColumnType.REAL_VECTOR:
-            return "TO_REAL_VECTOR"
+            return f"TO_REAL_VECTOR('{expr}')"
         elif self.vector_column_type == VectorColumnType.HALF_VECTOR:
-            return "TO_HALF_VECTOR"
+            return f"TO_HALF_VECTOR('{expr}')"
         else:
             raise ValueError(f"Unsupported vector type: {self.vector_column_type}")
 
-    def _conditionally_wrap_half_vector(self, expr: str) -> str:
+    def _convert_vector_embedding_to_column_type(self, expr: str) -> str:
         """
-        Conditionally wraps a SQL expression with TO_HALF_VECTOR(...)
-        based on the vector column type.
+        Makes sure that an embedding produced by HANA's VECTOR_EMBEDDING
+        aligns with the column type.
+
+        Note that VECTOR_EMBEDDING always returns REAL_VECTORs.
 
         Args:
             expr (str): SQL expression producing an embedding vector.
-
         Returns:
-            str: Wrapped expression if vector column type is HALF_VECTOR,
+            str: Wrapped expression if vector column type is not REAL_VECTOR,
                 otherwise the original expression.
         """
-        if self.vector_column_type == VectorColumnType.HALF_VECTOR:
-            return f"TO_HALF_VECTOR({expr})"
+
+        if "VECTOR_EMBEDDING" not in expr.upper():
+            raise ValueError(f"Expected 'VECTOR_EMBEDDING' in '{expr}'")
+
+        if self.vector_column_type != "REAL_VECTOR":
+            return self._convert_to_target_vector_type(expr)
+
         return expr
 
     def create_hnsw_index(
@@ -562,7 +575,7 @@ class HanaDB(VectorStore):
 
         # Wrap VECTOR_EMBEDDING with vector type conversion if needed
         vector_embedding_sql = "VECTOR_EMBEDDING(:content, 'DOCUMENT', :model_version)"
-        vector_embedding_sql = self._conditionally_wrap_half_vector(
+        vector_embedding_sql = self._convert_vector_embedding_to_column_type(
             vector_embedding_sql
         )
 
@@ -605,7 +618,7 @@ class HanaDB(VectorStore):
         metadata_column: str = default_metadata_column,
         vector_column: str = default_vector_column,
         vector_column_length: int = default_vector_column_length,
-        vector_column_type: str = VectorColumnType.HALF_VECTOR,
+        vector_column_type: str = VectorColumnType.REAL_VECTOR,
         *,
         specific_metadata_columns: Optional[list[str]] = None,
     ):
@@ -699,8 +712,7 @@ class HanaDB(VectorStore):
             - list[float]: The document's embedding vector
         """
         # Use the appropriate vector conversion function
-        vector_conversion_func = self._get_vector_conversion_function()
-        embedding_expr = f"{vector_conversion_func} ('{str(embedding)}')"
+        embedding_expr = self._convert_to_target_vector_type(expr=str(embedding))
 
         return self._similarity_search_with_score_and_vector(
             embedding_expr, k=k, filter=filter
@@ -740,7 +752,9 @@ class HanaDB(VectorStore):
 
         embedding_expr = "VECTOR_EMBEDDING(?, 'QUERY', ?)"
         # Wrap VECTOR_EMBEDDING with vector type conversion if needed
-        vector_embedding_sql = self._conditionally_wrap_half_vector(embedding_expr)
+        vector_embedding_sql = self._convert_vector_embedding_to_column_type(
+            embedding_expr
+        )
 
         vector_embedding_params = [query, self.internal_embedding_model_id]
         return self._similarity_search_with_score_and_vector(
@@ -1117,7 +1131,7 @@ class HanaDB(VectorStore):
         else:  # generates embedding using the internal embedding function of HanaDb
             # Wrap VECTOR_EMBEDDING with vector type conversion if needed
             vector_embedding_sql = "VECTOR_EMBEDDING(:content, 'QUERY', :model_version)"
-            vector_embedding_sql = self._conditionally_wrap_half_vector(
+            vector_embedding_sql = self._convert_vector_embedding_to_column_type(
                 vector_embedding_sql
             )
             sql_str = f"SELECT {vector_embedding_sql} FROM sys.DUMMY;"
