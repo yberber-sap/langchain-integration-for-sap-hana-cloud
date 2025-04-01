@@ -1097,6 +1097,30 @@ class HanaDB(VectorStore):
         """
         return await run_in_executor(None, self.delete, ids=ids, filter=filter)
 
+    def _embed_query_hana_internal(self, query: str) -> list[float]:
+        """
+        Generates query embedding using HANA's internal embedding engine.
+        """
+        vector_embedding_sql = "VECTOR_EMBEDDING(:content, 'QUERY', :model_version)"
+        vector_embedding_sql = self._convert_vector_embedding_to_column_type(
+            vector_embedding_sql
+        )
+        sql_str = f"SELECT {vector_embedding_sql} FROM sys.DUMMY;"
+        cur = self.connection.cursor()
+        try:
+            cur.execute(
+                sql_str,
+                content=query,
+                model_version=self.internal_embedding_model_id,
+            )
+            if cur.has_result_set():
+                res = cur.fetchall()
+                return self._deserialize_binary_format(res[0][0])
+            else:
+                raise RuntimeError("No result set returned for query embedding.")
+        finally:
+            cur.close()
+
     def max_marginal_relevance_search(  # type: ignore[override]
         self,
         query: str,
@@ -1129,24 +1153,7 @@ class HanaDB(VectorStore):
         if not self.use_internal_embeddings:
             embedding = self.embedding.embed_query(query)
         else:  # generates embedding using the internal embedding function of HanaDb
-            # Wrap VECTOR_EMBEDDING with vector type conversion if needed
-            vector_embedding_sql = "VECTOR_EMBEDDING(:content, 'QUERY', :model_version)"
-            vector_embedding_sql = self._convert_vector_embedding_to_column_type(
-                vector_embedding_sql
-            )
-            sql_str = f"SELECT {vector_embedding_sql} FROM sys.DUMMY;"
-            cur = self.connection.cursor()
-            try:
-                cur.execute(
-                    sql_str,
-                    content=query,
-                    model_version=self.internal_embedding_model_id,
-                )
-                if cur.has_result_set():
-                    res = cur.fetchall()
-                    embedding = self._deserialize_binary_format(res[0][0])
-            finally:
-                cur.close()
+            embedding = self._embed_query_hana_internal(query)
 
         return self.max_marginal_relevance_search_by_vector(
             embedding=embedding,
