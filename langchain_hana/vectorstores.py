@@ -290,12 +290,13 @@ class HanaDB(VectorStore):
 
     @staticmethod
     def _sanitize_vector_column_type(vector_column_type: str) -> str:
-        if vector_column_type not in VECTOR_COLUMN_SQL_TYPES:
+        vector_column_type_upper = vector_column_type.upper()
+        if vector_column_type_upper not in VECTOR_COLUMN_SQL_TYPES:
             raise ValueError(
                 f"Unsupported vector_column_type: {vector_column_type}. "
                 f"Must be one of {', '.join(VECTOR_COLUMN_SQL_TYPES)}"
             )
-        return vector_column_type
+        return vector_column_type_upper
 
     def _serialize_binary_format(self, values: list[float]) -> bytes:
         # Converts a list of floats into binary format
