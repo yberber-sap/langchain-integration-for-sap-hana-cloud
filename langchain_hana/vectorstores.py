@@ -30,6 +30,8 @@ HANA_DISTANCE_FUNCTION: dict = {
     DistanceStrategy.EUCLIDEAN_DISTANCE: ("L2DISTANCE", "ASC"),
 }
 
+VECTOR_COLUMN_SQL_TYPES = ["REAL_VECTOR", "HALF_VECTOR"]
+
 COMPARISONS_TO_SQL = {
     "$eq": "=",
     "$ne": "<>",
@@ -60,12 +62,7 @@ default_content_column: str = "VEC_TEXT"
 default_metadata_column: str = "VEC_META"
 default_vector_column: str = "VEC_VECTOR"
 default_vector_column_length: int = -1  # -1 means dynamic length
-
-
-# Enum to represent vector column types
-class VectorColumnType:
-    REAL_VECTOR = "REAL_VECTOR"
-    HALF_VECTOR = "HALF_VECTOR"
+default_vector_column_type: str = "REAL_VECTOR"
 
 
 class HanaDB(VectorStore):
@@ -89,7 +86,7 @@ class HanaDB(VectorStore):
         metadata_column: str = default_metadata_column,
         vector_column: str = default_vector_column,
         vector_column_length: int = default_vector_column_length,
-        vector_column_type: str = VectorColumnType.REAL_VECTOR,
+        vector_column_type: str = default_vector_column_type,
         *,
         specific_metadata_columns: Optional[list[str]] = None,
     ):
@@ -292,40 +289,40 @@ class HanaDB(VectorStore):
         return metadata_columns
 
     @staticmethod
-    def _sanitize_vector_column_type(vector_column_type: VectorColumnType) -> str:
-        if vector_column_type not in [
-            VectorColumnType.REAL_VECTOR,
-            VectorColumnType.HALF_VECTOR,
-        ]:
+    def _sanitize_vector_column_type(vector_column_type: str) -> str:
+        if vector_column_type not in VECTOR_COLUMN_SQL_TYPES:
             raise ValueError(
                 f"Unsupported vector_column_type: {vector_column_type}. "
-                f"Must be one of {VectorColumnType.REAL_VECTOR} "
-                f"or {VectorColumnType.HALF_VECTOR}"
+                f"Must be one of {', '.join(VECTOR_COLUMN_SQL_TYPES)}"
             )
         return vector_column_type
 
     def _serialize_binary_format(self, values: list[float]) -> bytes:
         # Converts a list of floats into binary format
-        if self.vector_column_type == VectorColumnType.HALF_VECTOR:
+        if self.vector_column_type == "HALF_VECTOR":
             # 2-byte half-precision float serialization
             return struct.pack(f"<I{len(values)}e", len(values), *values)
-        elif self.vector_column_type == VectorColumnType.REAL_VECTOR:
+        elif self.vector_column_type == "REAL_VECTOR":
             # 4-byte float serialization (standard FVECS format)
             return struct.pack(f"<I{len(values)}f", len(values), *values)
         else:
-            raise ValueError(f"Unsupported vector column type: {self.vector_column_type}")
+            raise ValueError(
+                f"Unsupported vector column type: {self.vector_column_type}"
+            )
 
     def _deserialize_binary_format(self, fvecs: bytes) -> list[float]:
         # Extracts a list of floats from binary format
         dim = struct.unpack_from("<I", fvecs, 0)[0]
-        if self.vector_column_type == VectorColumnType.HALF_VECTOR:
+        if self.vector_column_type == "HALF_VECTOR":
             # 2-byte half-precision float deserialization
             return list(struct.unpack_from(f"<{dim}e", fvecs, 4))
-        elif self.vector_column_type == VectorColumnType.REAL_VECTOR:
+        elif self.vector_column_type == "REAL_VECTOR":
             # 4-byte float deserialization (standard FVECS format)
             return list(struct.unpack_from(f"<{dim}f", fvecs, 4))
         else:
-            raise ValueError(f"Unsupported vector column type: {self.vector_column_type}")
+            raise ValueError(
+                f"Unsupported vector column type: {self.vector_column_type}"
+            )
 
     def _split_off_special_metadata(self, metadata: dict) -> tuple[dict, list]:
         # Use provided values by default or fallback
@@ -353,10 +350,8 @@ class HanaDB(VectorStore):
         Returns:
             str: The expression wrapped with the appropriate conversion function.
         """
-        if self.vector_column_type == VectorColumnType.REAL_VECTOR:
-            return f"TO_REAL_VECTOR('{expr}')"
-        elif self.vector_column_type == VectorColumnType.HALF_VECTOR:
-            return f"TO_HALF_VECTOR('{expr}')"
+        if self.vector_column_type in VECTOR_COLUMN_SQL_TYPES:
+            return f"TO_{self.vector_column_type}('{expr}')"
         else:
             raise ValueError(f"Unsupported vector type: {self.vector_column_type}")
 
@@ -622,7 +617,7 @@ class HanaDB(VectorStore):
         metadata_column: str = default_metadata_column,
         vector_column: str = default_vector_column,
         vector_column_length: int = default_vector_column_length,
-        vector_column_type: str = VectorColumnType.REAL_VECTOR,
+        vector_column_type: str = default_vector_column_type,
         *,
         specific_metadata_columns: Optional[list[str]] = None,
     ):
