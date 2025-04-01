@@ -304,23 +304,23 @@ class HanaDB(VectorStore):
             )
         return vector_column_type
 
-    def _serialize_fvecs(self, values: list[float]) -> bytes:
-        # Converts a list of floats into FVECS binary format
+    def _serialize_binary_format(self, values: list[float]) -> bytes:
+        # Converts a list of floats into binary format
         if self.vector_column_type == VectorColumnType.HALF_VECTOR:
             # 2-byte half-precision float serialization
             return struct.pack(f"<I{len(values)}e", len(values), *values)
         else:
-            # 4-byte float serialization
+            # 4-byte float serialization (standard FVECS format)
             return struct.pack(f"<I{len(values)}f", len(values), *values)
 
-    def _deserialize_fvecs(self, fvecs: bytes) -> list[float]:
-        # Extracts a list of floats from FVECS binary format
+    def _deserialize_binary_format(self, fvecs: bytes) -> list[float]:
+        # Extracts a list of floats from binary format
         dim = struct.unpack_from("<I", fvecs, 0)[0]
         if self.vector_column_type == VectorColumnType.HALF_VECTOR:
             # 2-byte half-precision float deserialization
             return list(struct.unpack_from("<%se" % dim, fvecs, 4))
         else:
-            # 4-byte float deserialization
+            # 4-byte float deserialization (standard FVECS format)
             return list(struct.unpack_from("<%sf" % dim, fvecs, 4))
 
     def _split_off_special_metadata(self, metadata: dict) -> tuple[dict, list]:
@@ -502,7 +502,7 @@ class HanaDB(VectorStore):
                 (
                     text,
                     json.dumps(HanaDB._sanitize_metadata_keys(metadata)),
-                    self._serialize_fvecs(embeddings[i]),
+                    self._serialize_binary_format(embeddings[i]),
                     *extracted_special_metadata,
                 )
             )
@@ -819,7 +819,7 @@ class HanaDB(VectorStore):
                 for row in rows:
                     js = json.loads(row[1])
                     doc = Document(page_content=row[0], metadata=js)
-                    result_vector = self._deserialize_fvecs(row[2])
+                    result_vector = self._deserialize_binary_format(row[2])
                     result.append((doc, row[3], result_vector))
         finally:
             cur.close()
@@ -1130,7 +1130,7 @@ class HanaDB(VectorStore):
                 )
                 if cur.has_result_set():
                     res = cur.fetchall()
-                    embedding = self._deserialize_fvecs(res[0][0])
+                    embedding = self._deserialize_binary_format(res[0][0])
             finally:
                 cur.close()
 
