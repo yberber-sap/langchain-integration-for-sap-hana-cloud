@@ -22,19 +22,6 @@ class HanaTestUtils:
             return res[0]
 
     @staticmethod
-    def drop_table_if_exists(conn, schema_name, table_name):
-        res = HanaTestUtils.execute_sql(
-            conn,
-            f"SELECT COUNT(*) FROM SYS.TABLES WHERE "
-            f"SCHEMA_NAME='{schema_name}' AND TABLE_NAME='{table_name}'",
-            return_result=True,
-        )
-        if res != 0:
-            HanaTestUtils.execute_sql(
-                conn, f'DROP TABLE "{schema_name}"."{table_name}" CASCADE'
-            )
-
-    @staticmethod
     def drop_schema_if_exists(conn, schema_name):
         res = HanaTestUtils.execute_sql(
             conn,

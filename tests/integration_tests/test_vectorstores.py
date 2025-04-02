@@ -63,20 +63,6 @@ class ConfigData:
 test_setup = ConfigData()
 
 
-def generateSchemaName(cursor):  # type: ignore[no-untyped-def]
-    # return "Langchain"
-    cursor.execute(
-        "SELECT REPLACE(CURRENT_UTCDATE, '-', '') || '_' || BINTOHEX(SYSUUID) FROM "
-        "DUMMY;"
-    )
-    if cursor.has_result_set():
-        rows = cursor.fetchall()
-        uid = rows[0][0]
-    else:
-        uid = random.randint(1, 100000000)
-    return f"VEC_{uid}"
-
-
 def setup_module(module):  # type: ignore[no-untyped-def]
     test_setup.conn = dbapi.connect(
         address=os.environ.get("HANA_DB_ADDRESS"),
