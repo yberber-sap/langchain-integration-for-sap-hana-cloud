@@ -116,23 +116,10 @@ def metadatas() -> List[str]:
     ]
 
 
-def drop_table(connection, table_name):  # type: ignore[no-untyped-def]
-    try:
-        cur = connection.cursor()
-        sql_str = f"DROP TABLE {table_name}"
-        cur.execute(sql_str)
-    except dbapi.ProgrammingError:
-        pass
-    finally:
-        cur.close()
-
-
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_non_existing_table() -> None:
     """Test end to end construction and search."""
     table_name = "NON_EXISTING"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectordb = HanaDB(
@@ -149,7 +136,6 @@ def test_hanavector_non_existing_table() -> None:
 def test_hanavector_table_with_missing_columns() -> None:
     table_name = "EXISTING_MISSING_COLS"
     try:
-        drop_table(test_setup.conn, table_name)
         cur = test_setup.conn.cursor()
         sql_str = f"CREATE TABLE {table_name}(WRONG_COL NVARCHAR(500));"
         cur.execute(sql_str)
@@ -178,7 +164,6 @@ def test_hanavector_table_with_nvarchar_content(texts: List[str]) -> None:
     metadata_column = "TEST_META"
     vector_column = "TEST_VECTOR"
     try:
-        drop_table(test_setup.conn, table_name)
         cur = test_setup.conn.cursor()
         sql_str = (
             f"CREATE TABLE {table_name}({content_column} NVARCHAR(2048), "
@@ -219,7 +204,6 @@ def test_hanavector_table_with_wrong_typed_columns() -> None:
     metadata_column = "DOC_META"
     vector_column = "DOC_VECTOR"
     try:
-        drop_table(test_setup.conn, table_name)
         cur = test_setup.conn.cursor()
         sql_str = (
             f"CREATE TABLE {table_name}({content_column} INTEGER, "
@@ -248,11 +232,9 @@ def test_hanavector_table_with_wrong_typed_columns() -> None:
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_non_existing_table_fixed_vector_length() -> None:
     """Test end to end construction and search."""
-    table_name = "NON_EXISTING"
+    table_name = "NON_EXISTING_FIXED_VECTOR_LENGTH"
     vector_column = "MY_VECTOR"
     vector_column_length = 42
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectordb = HanaDB(
@@ -273,8 +255,6 @@ def test_hanavector_non_existing_table_fixed_vector_length() -> None:
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_add_texts(texts: List[str]) -> None:
     table_name = "TEST_TABLE_ADD_TEXTS"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectordb = HanaDB(
@@ -298,8 +278,6 @@ def test_hanavector_add_texts(texts: List[str]) -> None:
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_from_texts(texts: List[str]) -> None:
     table_name = "TEST_TABLE_FROM_TEXTS"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -326,8 +304,6 @@ def test_hanavector_from_texts(texts: List[str]) -> None:
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_similarity_search_simple(texts: List[str]) -> None:
     table_name = "TEST_TABLE_SEARCH_SIMPLE"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -344,8 +320,6 @@ def test_hanavector_similarity_search_simple(texts: List[str]) -> None:
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_similarity_search_by_vector_simple(texts: List[str]) -> None:
     table_name = "TEST_TABLE_SEARCH_SIMPLE_VECTOR"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     vectorDB = HanaDB.from_texts(
         connection=test_setup.conn,
@@ -364,8 +338,6 @@ def test_hanavector_similarity_search_simple_euclidean_distance(
     texts: List[str],
 ) -> None:
     table_name = "TEST_TABLE_SEARCH_EUCLIDIAN"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -385,8 +357,6 @@ def test_hanavector_similarity_search_with_metadata(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_METADATA"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -412,8 +382,6 @@ def test_hanavector_similarity_search_with_metadata_filter(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_FILTER"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -450,8 +418,6 @@ def test_hanavector_similarity_search_with_metadata_filter_string(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_FILTER_STRING"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -473,8 +439,6 @@ def test_hanavector_similarity_search_with_metadata_filter_bool(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_FILTER_BOOL"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -496,8 +460,6 @@ def test_hanavector_similarity_search_with_metadata_filter_invalid_type(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_FILTER_INVALID_TYPE"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -521,8 +483,6 @@ def test_hanavector_similarity_search_with_score(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_SCORE"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -546,8 +506,6 @@ def test_hanavector_similarity_search_with_relevance_score(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_REL_SCORE"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -571,8 +529,6 @@ def test_hanavector_similarity_search_with_relevance_score_with_euclidian_distan
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_REL_SCORE_EUCLIDIAN"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -597,8 +553,6 @@ def test_hanavector_similarity_search_with_score_with_euclidian_distance(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_SCORE_DISTANCE"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -620,8 +574,6 @@ def test_hanavector_similarity_search_with_score_with_euclidian_distance(
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_delete_with_filter(texts: List[str], metadatas: List[dict]) -> None:
     table_name = "TEST_TABLE_DELETE_FILTER"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Fill table
     vectorDB = HanaDB.from_texts(
@@ -647,8 +599,6 @@ async def test_hanavector_delete_with_filter_async(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_DELETE_FILTER_ASYNC"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Fill table
     vectorDB = HanaDB.from_texts(
@@ -674,8 +624,6 @@ def test_hanavector_delete_all_with_empty_filter(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_DELETE_ALL"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Fill table
     vectorDB = HanaDB.from_texts(
@@ -701,8 +649,6 @@ def test_hanavector_delete_called_wrong(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_DELETE_FILTER_WRONG"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Fill table
     vectorDB = HanaDB.from_texts(
@@ -733,8 +679,6 @@ def test_hanavector_delete_called_wrong(
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_max_marginal_relevance_search(texts: List[str]) -> None:
     table_name = "TEST_TABLE_MAX_RELEVANCE"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -754,8 +698,6 @@ def test_hanavector_max_marginal_relevance_search(texts: List[str]) -> None:
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_max_marginal_relevance_search_vector(texts: List[str]) -> None:
     table_name = "TEST_TABLE_MAX_RELEVANCE_VECTOR"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -777,8 +719,6 @@ def test_hanavector_max_marginal_relevance_search_vector(texts: List[str]) -> No
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 async def test_hanavector_max_marginal_relevance_search_async(texts: List[str]) -> None:
     table_name = "TEST_TABLE_MAX_RELEVANCE_ASYNC"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     vectorDB = HanaDB.from_texts(
@@ -802,8 +742,6 @@ def test_hanavector_filter_prepared_statement_params(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_FILTER_PARAM"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Check if table is created
     HanaDB.from_texts(
@@ -865,8 +803,6 @@ def test_hanavector_filter_prepared_statement_params(
 
 def test_invalid_metadata_keys(texts: List[str], metadatas: List[dict]) -> None:
     table_name = "TEST_TABLE_INVALID_METADATA"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     invalid_metadatas = [
         {"sta rt": 0, "end": 100, "quality": "good", "ready": True},
@@ -938,8 +874,6 @@ def test_hanavector_table_mixed_case_names(texts: List[str]) -> None:
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_enhanced_filter_1() -> None:
     table_name = "TEST_TABLE_ENHANCED_FILTER_1"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     vectorDB = HanaDB(
         connection=test_setup.conn,
@@ -957,13 +891,15 @@ def test_pgvector_with_with_metadata_filters_1(
     expected_ids: List[int],
 ) -> None:
     table_name = "TEST_TABLE_ENHANCED_FILTER_1"
-    drop_table(test_setup.conn, table_name)
 
     vectorDB = HanaDB(
         connection=test_setup.conn,
         embedding=embedding,
         table_name=table_name,
     )
+
+    # Delete already existing documents from the table
+    vectorDB.delete(filter={})
 
     vectorDB.add_documents(DOCUMENTS)
 
@@ -980,13 +916,15 @@ def test_pgvector_with_with_metadata_filters_2(
     expected_ids: List[int],
 ) -> None:
     table_name = "TEST_TABLE_ENHANCED_FILTER_2"
-    drop_table(test_setup.conn, table_name)
 
     vectorDB = HanaDB(
         connection=test_setup.conn,
         embedding=embedding,
         table_name=table_name,
     )
+
+    # Delete already existing documents from the table
+    vectorDB.delete(filter={})
 
     vectorDB.add_documents(DOCUMENTS)
 
@@ -1003,13 +941,15 @@ def test_pgvector_with_with_metadata_filters_3(
     expected_ids: List[int],
 ) -> None:
     table_name = "TEST_TABLE_ENHANCED_FILTER_3"
-    drop_table(test_setup.conn, table_name)
 
     vectorDB = HanaDB(
         connection=test_setup.conn,
         embedding=embedding,
         table_name=table_name,
     )
+
+    # Delete already existing documents from the table
+    vectorDB.delete(filter={})
 
     vectorDB.add_documents(DOCUMENTS)
 
@@ -1026,13 +966,15 @@ def test_pgvector_with_with_metadata_filters_4(
     expected_ids: List[int],
 ) -> None:
     table_name = "TEST_TABLE_ENHANCED_FILTER_4"
-    drop_table(test_setup.conn, table_name)
 
     vectorDB = HanaDB(
         connection=test_setup.conn,
         embedding=embedding,
         table_name=table_name,
     )
+
+    # Delete already existing documents from the table
+    vectorDB.delete(filter={})
 
     vectorDB.add_documents(DOCUMENTS)
 
@@ -1049,7 +991,6 @@ def test_pgvector_with_with_metadata_filters_4b(
     expected_ids: List[int],
 ) -> None:
     table_name = "TEST_TABLE_ENHANCED_FILTER_4B"
-    drop_table(test_setup.conn, table_name)
 
     vectorDB = HanaDB(
         connection=test_setup.conn,
@@ -1072,13 +1013,15 @@ def test_pgvector_with_with_metadata_filters_5(
     expected_ids: List[int],
 ) -> None:
     table_name = "TEST_TABLE_ENHANCED_FILTER_5"
-    drop_table(test_setup.conn, table_name)
 
     vectorDB = HanaDB(
         connection=test_setup.conn,
         embedding=embedding,
         table_name=table_name,
     )
+
+    # Delete already existing documents from the table
+    vectorDB.delete(filter={})
 
     vectorDB.add_documents(DOCUMENTS)
 
@@ -1093,7 +1036,6 @@ def test_preexisting_specific_columns_for_metadata_fill(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "PREEXISTING_FILTER_COLUMNS"
-    # drop_table(test_setup.conn, table_name)
 
     sql_str = (
         f'CREATE TABLE "{table_name}" ('
@@ -1155,7 +1097,6 @@ def test_preexisting_specific_columns_for_metadata_via_array(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "PREEXISTING_FILTER_COLUMNS_VIA_ARRAY"
-    # drop_table(test_setup.conn, table_name)
 
     sql_str = (
         f'CREATE TABLE "{table_name}" ('
@@ -1228,7 +1169,6 @@ def test_preexisting_specific_columns_for_metadata_multiple_columns(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "PREEXISTING_FILTER_MULTIPLE_COLUMNS"
-    # drop_table(test_setup.conn, table_name)
 
     sql_str = (
         f'CREATE TABLE "{table_name}" ('
@@ -1278,7 +1218,6 @@ def test_preexisting_specific_columns_for_metadata_empty_columns(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "PREEXISTING_FILTER_MULTIPLE_COLUMNS_EMPTY"
-    # drop_table(test_setup.conn, table_name)
 
     sql_str = (
         f'CREATE TABLE "{table_name}" ('
@@ -1332,7 +1271,6 @@ def test_preexisting_specific_columns_for_metadata_wrong_type_or_non_existing(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "PREEXISTING_FILTER_COLUMNS_WRONG_TYPE"
-    # drop_table(test_setup.conn, table_name)
 
     sql_str = (
         f'CREATE TABLE "{table_name}" ('
@@ -1384,7 +1322,6 @@ def test_preexisting_specific_columns_for_returned_metadata_completeness(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "PREEXISTING_FILTER_COLUMNS_METADATA_COMPLETENESS"
-    # drop_table(test_setup.conn, table_name)
 
     sql_str = (
         f'CREATE TABLE "{table_name}" ('
@@ -1425,9 +1362,6 @@ def test_preexisting_specific_columns_for_returned_metadata_completeness(
 def test_create_hnsw_index_with_default_values(texts: List[str]) -> None:
     table_name = "TEST_TABLE_HNSW_INDEX_DEFAULT"
 
-    # Delete table if it exists (cleanup from previous tests)
-    drop_table(test_setup.conn, table_name)
-
     # Create table and insert data
     vectorDB = HanaDB.from_texts(
         connection=test_setup.conn,
@@ -1453,9 +1387,6 @@ def test_create_hnsw_index_with_default_values(texts: List[str]) -> None:
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_create_hnsw_index_with_defined_values(texts: List[str]) -> None:
     table_name = "TEST_TABLE_HNSW_INDEX_DEFINED"
-
-    # Delete table if it exists (cleanup from previous tests)
-    drop_table(test_setup.conn, table_name)
 
     # Create table and insert data
     vectorDB = HanaDB.from_texts(
@@ -1486,8 +1417,6 @@ def test_create_hnsw_index_with_defined_values(texts: List[str]) -> None:
 def test_create_hnsw_index_after_initialization(texts: List[str]) -> None:
     table_name = "TEST_TABLE_HNSW_INDEX_AFTER_INIT"
 
-    drop_table(test_setup.conn, table_name)
-
     # Initialize HanaDB without adding documents yet
     vectorDB = HanaDB(
         connection=test_setup.conn,
@@ -1516,9 +1445,6 @@ def test_create_hnsw_index_after_initialization(texts: List[str]) -> None:
 def test_duplicate_hnsw_index_creation(texts: List[str]) -> None:
     table_name = "TEST_TABLE_HNSW_DUPLICATE_INDEX"
 
-    # Delete table if it exists (cleanup from previous tests)
-    drop_table(test_setup.conn, table_name)
-
     # Create table and insert data
     vectorDB = HanaDB.from_texts(
         connection=test_setup.conn,
@@ -1543,9 +1469,6 @@ def test_duplicate_hnsw_index_creation(texts: List[str]) -> None:
 def test_create_hnsw_index_invalid_m_value(texts: List[str]) -> None:
     table_name = "TEST_TABLE_HNSW_INVALID_M"
 
-    # Cleanup: drop the table if it exists
-    drop_table(test_setup.conn, table_name)
-
     # Create table and insert data
     vectorDB = HanaDB.from_texts(
         connection=test_setup.conn,
@@ -1566,9 +1489,6 @@ def test_create_hnsw_index_invalid_m_value(texts: List[str]) -> None:
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_create_hnsw_index_invalid_ef_construction(texts: List[str]) -> None:
     table_name = "TEST_TABLE_HNSW_INVALID_EF_CONSTRUCTION"
-
-    # Cleanup: drop the table if it exists
-    drop_table(test_setup.conn, table_name)
 
     # Create table and insert data
     vectorDB = HanaDB.from_texts(
@@ -1591,9 +1511,6 @@ def test_create_hnsw_index_invalid_ef_construction(texts: List[str]) -> None:
 def test_create_hnsw_index_invalid_ef_search(texts: List[str]) -> None:
     table_name = "TEST_TABLE_HNSW_INVALID_EF_SEARCH"
 
-    # Cleanup: drop the table if it exists
-    drop_table(test_setup.conn, table_name)
-
     # Create table and insert data
     vectorDB = HanaDB.from_texts(
         connection=test_setup.conn,
@@ -1614,8 +1531,6 @@ def test_create_hnsw_index_invalid_ef_search(texts: List[str]) -> None:
 @pytest.mark.skipif(not hanadb_installed, reason="hanadb not installed")
 def test_hanavector_keyword_search(texts: List[str], metadatas: List[dict]) -> None:
     table_name = "TEST_TABLE_KEYWORD_SEARCH_WITHOUT_UNSPECIFIC_METADATA_COL"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     sql_str = (
         f'CREATE TABLE "{table_name}" ('
@@ -1689,8 +1604,6 @@ def test_hanavector_keyword_search_unspecific_metadata_column(
     texts: List[str], metadatas: List[dict]
 ) -> None:
     table_name = "TEST_TABLE_KEYWORD_SEARCH_WITH_UNSPECIFIC_METADATA_COL"
-    # Delete table if it exists
-    drop_table(test_setup.conn, table_name)
 
     vectorDB = HanaDB.from_texts(
         connection=test_setup.conn,
