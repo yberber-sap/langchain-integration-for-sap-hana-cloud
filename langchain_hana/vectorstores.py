@@ -107,7 +107,7 @@ class HanaDB(VectorStore):
         self.vector_column = HanaDB._sanitize_name(vector_column)
         self.vector_column_length = HanaDB._sanitize_int(vector_column_length)
         self.vector_column_type = HanaDB._sanitize_vector_column_type(
-            vector_column_type
+            vector_column_type, connection
         )
         self.specific_metadata_columns = HanaDB._sanitize_specific_metadata_columns(
             specific_metadata_columns or []
@@ -288,15 +288,36 @@ class HanaDB(VectorStore):
             metadata_columns.append(sanitized_name)
         return metadata_columns
 
+
     @staticmethod
-    def _sanitize_vector_column_type(vector_column_type: str) -> str:
+    def _sanitize_vector_column_type(
+        vector_column_type: str, connection: dbapi.Connection
+    ) -> str:
         vector_column_type_upper = vector_column_type.upper()
         if vector_column_type_upper not in VECTOR_COLUMN_SQL_TYPES:
             raise ValueError(
                 f"Unsupported vector_column_type: {vector_column_type}. "
                 f"Must be one of {', '.join(VECTOR_COLUMN_SQL_TYPES)}"
             )
+        if vector_column_type_upper == "HALF_VECTOR":
+            HanaDB._check_half_vector_availability(connection)
         return vector_column_type_upper
+
+    @staticmethod
+    def _check_half_vector_availability(connection: dbapi.Connection) -> bool:
+        cur = connection.cursor()
+        try:
+            cur.execute("SELECT TYPE_NAME FROM SYS.DATA_TYPES")
+            if cur.has_result_set():
+                rows = cur.fetchall()
+                available_types = {row[0] for row in rows}
+                if "HALF_VECTOR" in available_types:
+                    return True
+            raise ValueError(
+                "HALF_VECTOR is only supported on instances from 2025.15 (QRC 2/2025) onward."
+            )
+        finally:
+            cur.close()
 
     def _serialize_binary_format(self, values: list[float]) -> bytes:
         # Converts a list of floats into binary format
