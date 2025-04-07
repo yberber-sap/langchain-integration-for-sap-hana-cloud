@@ -288,7 +288,6 @@ class HanaDB(VectorStore):
             metadata_columns.append(sanitized_name)
         return metadata_columns
 
-
     @staticmethod
     def _sanitize_vector_column_type(
         vector_column_type: str, connection: dbapi.Connection
@@ -299,25 +298,52 @@ class HanaDB(VectorStore):
                 f"Unsupported vector_column_type: {vector_column_type}. "
                 f"Must be one of {', '.join(VECTOR_COLUMN_SQL_TYPES)}"
             )
-        if vector_column_type_upper == "HALF_VECTOR":
-            HanaDB._check_half_vector_availability(connection)
+        HanaDB._validate_datatype_support(connection, vector_column_type_upper)
         return vector_column_type_upper
 
     @staticmethod
-    def _check_half_vector_availability(connection: dbapi.Connection) -> bool:
+    def _get_min_supported_version(datatype: str) -> str:
+        if datatype == "HALF_VECTOR":
+            return "2025.15 (QRC 2/2025)"
+        elif datatype == "REAL_VECTOR":
+            return "2024.2 (QRC 1/2024)"
+        else:
+            raise ValueError(f"Unknown datatype: '{datatype}'")
+
+    @staticmethod
+    def _get_instance_version(connection: dbapi.Connection) -> str:
+        cursor = connection.cursor()
+        try:
+            cursor.execute("SELECT CLOUD_VERSION FROM SYS.M_DATABASE;")
+            result = cursor.fetchone()
+            return result[0]
+        except dbapi.Error:
+            return "<Error_Retrieving_Version>"
+        finally:
+            cursor.close()
+
+    @staticmethod
+    def _get_available_datatypes(connection: dbapi.Connection) -> set:
         cur = connection.cursor()
         try:
             cur.execute("SELECT TYPE_NAME FROM SYS.DATA_TYPES")
             if cur.has_result_set():
                 rows = cur.fetchall()
                 available_types = {row[0] for row in rows}
-                if "HALF_VECTOR" in available_types:
-                    return True
-            raise ValueError(
-                "HALF_VECTOR is only supported on instances from 2025.15 (QRC 2/2025) onward."
-            )
+                return available_types
+            raise ValueError("No data types returned by the database.")
         finally:
             cur.close()
+
+    @staticmethod
+    def _validate_datatype_support(connection: dbapi.Connection, datatype: str) -> bool:
+        if datatype in HanaDB._get_available_datatypes(connection):
+            return True
+        raise ValueError(
+            f"'{datatype}' is not available on this HANA instance.\n"
+            f"Instance version: {HanaDB._get_instance_version(connection)}\n"
+            f"Minimum required version: {HanaDB._get_min_supported_version(datatype)}"
+        )
 
     def _serialize_binary_format(self, values: list[float]) -> bytes:
         # Converts a list of floats into binary format
