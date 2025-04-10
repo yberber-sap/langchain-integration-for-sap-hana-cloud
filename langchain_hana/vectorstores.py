@@ -311,14 +311,14 @@ class HanaDB(VectorStore):
             raise ValueError(f"Unknown datatype: '{datatype}'")
 
     @staticmethod
-    def _get_instance_version(connection: dbapi.Connection) -> str:
+    def _get_instance_version(connection: dbapi.Connection) -> Optional[str]:
         cursor = connection.cursor()
         try:
             cursor.execute("SELECT CLOUD_VERSION FROM SYS.M_DATABASE;")
             result = cursor.fetchone()
             return result[0]
         except dbapi.Error:
-            return "<Error_Retrieving_Version>"
+            return None
         finally:
             cursor.close()
 
@@ -339,11 +339,19 @@ class HanaDB(VectorStore):
     def _validate_datatype_support(connection: dbapi.Connection, datatype: str) -> bool:
         if datatype in HanaDB._get_available_datatypes(connection):
             return True
-        raise ValueError(
-            f"'{datatype}' is not available on this HANA instance.\n"
-            f"Instance version: {HanaDB._get_instance_version(connection)}\n"
-            f"Minimum required version: {HanaDB._get_min_supported_version(datatype)}"
-        )
+
+        # Get instance version, but don't include it in error if retrieval fails
+        error_message = f"'{datatype}' is not available on this HANA instance.\n"
+
+        # Only include instance version line if it was successfully retrieved
+        instance_version = HanaDB._get_instance_version(connection)
+        if instance_version:
+            error_message += f"Instance version: {instance_version}\n"
+
+        min_instance_version = HanaDB._get_min_supported_version(datatype)
+        error_message += f"Minimum required instance version: {min_instance_version}"
+
+        raise ValueError(error_message)
 
     def _serialize_binary_format(self, values: list[float]) -> bytes:
         # Converts a list of floats into binary format
